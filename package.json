@@ -19,5 +19,8 @@
   "homepage": "https://github.com/Abir-Al-Arafat/Cikleshare#readme",
   "dependencies": {
     "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
