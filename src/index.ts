@@ -5,6 +5,11 @@ import cors from "cors";
 import http from "http";
 import cookieParser from "cookie-parser";
 
+import databaseConnection from "./config/database";
+
+import authRouter from "./routes/AuthRoutes";
+import userRouter from "./routes/UserRoutes";
+
 const app = express();
 dotenv.config();
 
@@ -33,6 +38,11 @@ app.use(
 // middleware to serve static files from the "public" directory
 app.use("/public", express.static(path.join(__dirname, "..", "public")));
 
+const baseApiUrl_V1 = "/api/v1";
+
+app.use(`${baseApiUrl_V1}/auth`, authRouter);
+app.use(`${baseApiUrl_V1}/users`, userRouter);
+
 app.get("/", (req: Request, res: Response) => {
   return res.status(200).send({
     name: "Cikleshare Backend",
@@ -56,6 +66,8 @@ app.use((err: SyntaxError, req: Request, res: Response, next: NextFunction) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+databaseConnection(() => {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
 });
