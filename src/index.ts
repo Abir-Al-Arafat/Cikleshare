@@ -30,6 +30,8 @@ app.use(
   }
 );
 
+app.use("/public", express.static(path.join(__dirname, "..", "public")));
+
 app.get("/", (req: Request, res: Response) => {
   return res.status(200).send({
     name: "Cikleshare Backend",
