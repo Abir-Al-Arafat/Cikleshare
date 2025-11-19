@@ -42,6 +42,11 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
+// ✅ Handle 404 Routes
+app.use((req, res) => {
+  return res.status(400).send({ message: "Route does not exist" });
+});
+
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
