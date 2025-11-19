@@ -30,6 +30,7 @@ app.use(
   }
 );
 
+// middleware to serve static files from the "public" directory
 app.use("/public", express.static(path.join(__dirname, "..", "public")));
 
 app.get("/", (req: Request, res: Response) => {
@@ -45,6 +46,12 @@ app.get("/", (req: Request, res: Response) => {
 // ✅ Handle 404 Routes
 app.use((req, res) => {
   return res.status(400).send({ message: "Route does not exist" });
+});
+
+// ✅ Handle Global Errors
+app.use((err: SyntaxError, req: Request, res: Response, next: NextFunction) => {
+  console.error("Global Error", err);
+  res.status(500).send({ message: "Internal Server Error" });
 });
 
 app.listen(3000, () => {
