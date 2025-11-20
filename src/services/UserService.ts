@@ -10,19 +10,21 @@ class UserService {
     return !!user;
   }
 
-  async findUserByEmail(email: string, includePassword: boolean = false) {
+  async findUserByEmail(
+    email: string,
+    options: { includePassword?: boolean } = {}
+  ) {
     try {
       const query = UserModel.findOne({ email });
-      console.log("User fetched in query:", query);
-      const user = includePassword
+
+      const user = options.includePassword
         ? await query.select("+password")
         : await query;
-
-      console.log("User fetched in user:", user);
 
       return user;
     } catch (error) {
       console.error("Error finding user by email(UserService):", error);
+
       return null;
     }
   }

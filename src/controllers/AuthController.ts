@@ -130,12 +130,20 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      const user = await userService.findUserByEmail(email, true);
+      const user = await userService.findUserByEmail(email, {
+        includePassword: true,
+      });
 
       if (!user) {
         return res
           .status(HTTP_STATUS.UNAUTHORIZED)
           .send(failure("Please sign up first"));
+      }
+
+      if (!user.password) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("password not found"));
       }
 
       const isPasswordValid = await bcrypt.compare(password, user.password!);
@@ -187,7 +195,9 @@ class AuthController {
     try {
       const { email } = req.body;
 
-      const user = await userService.findUserByEmail(email, true);
+      const user = await userService.findUserByEmail(email, {
+        includePassword: true,
+      });
 
       if (!user) {
         return res
