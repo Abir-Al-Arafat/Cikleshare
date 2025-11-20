@@ -182,6 +182,55 @@ class AuthController {
         .send(failure("Internal server error"));
     }
   }
+
+  async sendToken(req: Request, res: Response): Promise<Response> {
+    try {
+      const { email } = req.body;
+
+      const user = await userService.findUserByEmail(email, true);
+
+      if (!user) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("Please sign up first"));
+      }
+
+      const expiresIn = process.env.JWT_EXPIRES_IN
+        ? parseInt(process.env.JWT_EXPIRES_IN, 10)
+        : 3600; // default to 1 hour if not set
+
+      const token = jwt.sign(
+        {
+          _id: user._id,
+          roles: user.roles,
+        },
+        process.env.JWT_SECRET ?? "default_secret",
+        {
+          expiresIn,
+        }
+      );
+
+      res.setHeader("Authorization", token);
+      res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production" ? true : false,
+        maxAge: expiresIn * 1000,
+      });
+
+      return res.status(HTTP_STATUS.OK).send(
+        success("Login successful", {
+          //   user,
+          token,
+        })
+      );
+    } catch (err) {
+      console.log(err);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
 }
 
 export default new AuthController();
