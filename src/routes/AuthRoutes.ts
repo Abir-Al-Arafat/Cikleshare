@@ -17,10 +17,10 @@ import authController from "../controllers/AuthController";
 const routes = express();
 const upload = multer();
 
-const { signUp } = authController;
+const { signUp, login } = authController;
 
 // /api/users
 
 routes.post("/signup", upload.none(), signUp);
-
+routes.post("/login", upload.none(), login);
 export default routes;

@@ -65,6 +65,8 @@ class AuthController {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      console.log("hashedPassword", hashedPassword);
+
       const newUser = await authService.signUp(fullName, email, hashedPassword);
 
       console.log("newUser", newUser);
@@ -96,14 +98,14 @@ class AuthController {
         secure: process.env.NODE_ENV === "production" ? true : false,
         maxAge: expiresIn * 1000,
       });
-      const emailVerifyCode = generateRandomCode(6);
-      const emailData = signupEmail(
-        newUser?.fullName!,
-        emailVerifyCode,
-        req.body.email
-      );
+      //   const emailVerifyCode = generateRandomCode(6);
+      //   const emailData = signupEmail(
+      //     newUser?.fullName!,
+      //     emailVerifyCode,
+      //     req.body.email
+      //   );
 
-      emailWithNodemailerGmail(emailData);
+      //   emailWithNodemailerGmail(emailData);
 
       if (newUser) {
         return res.status(HTTP_STATUS.OK).send(
@@ -116,6 +118,63 @@ class AuthController {
       return res
         .status(HTTP_STATUS.BAD_REQUEST)
         .send(success("Account created successfully"));
+    } catch (err) {
+      console.log(err);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  async login(req: Request, res: Response): Promise<Response> {
+    try {
+      const { email, password } = req.body;
+
+      const user = await userService.findUserByEmail(email, true);
+
+      if (!user) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("Please sign up first"));
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password!);
+
+      if (!isPasswordValid) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("Invalid credentials"));
+      }
+
+      const expiresIn = process.env.JWT_EXPIRES_IN
+        ? parseInt(process.env.JWT_EXPIRES_IN, 10)
+        : 3600; // default to 1 hour if not set
+
+      const token = jwt.sign(
+        {
+          _id: user._id,
+          roles: user.roles,
+        },
+        process.env.JWT_SECRET ?? "default_secret",
+        {
+          expiresIn,
+        }
+      );
+
+      res.setHeader("Authorization", token);
+      res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: process.env.NODE_ENV === "production" ? true : false,
+        maxAge: expiresIn * 1000,
+      });
+
+      return res.status(HTTP_STATUS.OK).send(
+        success("Login successful", {
+          //   user,
+          token,
+        })
+      );
     } catch (err) {
       console.log(err);
       return res
