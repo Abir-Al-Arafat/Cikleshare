@@ -9,7 +9,7 @@ import authController from "../controllers/AuthController";
 //   isAuthorizedSuperAdmin,
 // } from "../middlewares/authValidationJWT";
 
-// import { userValidator } from "../middlewares/validation";
+import authValidator from "../validators/authValidator";
 
 // import fileUpload from "../middlewares/fileUpload";
 // import fileUploadMemory from "../middlewares/fileUploadMemory";
@@ -21,6 +21,6 @@ const { signUp, login } = authController;
 
 // /api/users
 
-routes.post("/signup", upload.none(), signUp);
+routes.post("/signup", upload.none(), authValidator.signUp, signUp);
 routes.post("/login", upload.none(), login);
 export default routes;

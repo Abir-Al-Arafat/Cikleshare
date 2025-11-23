@@ -6,7 +6,7 @@ import { success, failure, generateRandomCode } from "../utilities/common";
 // import { IQuery } from "../types/query-params";
 // import { IUser } from "../interfaces/user.interface";
 // import { TUploadFields } from "../types/upload-fields";
-// import { validationResult } from "express-validator";
+import { validationResult } from "express-validator";
 import HTTP_STATUS from "../constants/statusCodes";
 import authService from "../services/AuthService";
 import userService from "../services/UserService";
@@ -21,12 +21,13 @@ class AuthController {
   // Add your controller methods here
   async signUp(req: Request, res: Response): Promise<Response> {
     try {
-      //   const validation = validationResult(req).array();
-      //   if (validation.length) {
-      //     return res
-      //       .status(HTTP_STATUS.OK)
-      //       .send(failure("Failed to add the user", validation[0].msg));
-      //   }
+      const validation = validationResult(req).array();
+      console.log("validation", validation);
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.OK)
+          .send(failure("Failed to add the user", validation[0]?.msg));
+      }
 
       const { fullName, email, password, confirmPassword, role } = req.body;
 
