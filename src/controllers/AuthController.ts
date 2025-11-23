@@ -22,7 +22,7 @@ class AuthController {
   async signUp(req: Request, res: Response): Promise<Response> {
     try {
       const validation = validationResult(req).array();
-      console.log("validation", validation);
+
       if (validation.length) {
         return res
           .status(HTTP_STATUS.OK)
@@ -31,13 +31,12 @@ class AuthController {
 
       const { fullName, email, password, confirmPassword, role } = req.body;
 
-      console.log(fullName, email, password, confirmPassword, role);
-
       if (role === "admin") {
         return res
           .status(HTTP_STATUS.UNPROCESSABLE_ENTITY)
           .send(failure(`Admin cannot be signed up`));
       }
+
       const emailExists = await userService.isEmailTaken(email);
 
       if (emailExists) {
@@ -66,11 +65,7 @@ class AuthController {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      console.log("hashedPassword", hashedPassword);
-
       const newUser = await authService.signUp(fullName, email, hashedPassword);
-
-      console.log("newUser", newUser);
 
       if (!newUser) {
         return res
