@@ -30,6 +30,7 @@ const emailWithNodemailer = async (emailData: IEmailData) => {
       to: emailData.email, // list of receivers
       subject: emailData.subject, // Subject line
       html: emailData.html, // html body
+      attachments: emailData.attachments, // ← Add attachments
     };
     const info = await transporter.sendMail(mailOptions);
     console.log("Email sent %s", info.response);
@@ -46,6 +47,7 @@ const emailWithNodemailerGmail = async (emailData: IEmailData) => {
       to: emailData.email, // list of receivers
       subject: emailData.subject, // Subject line
       html: emailData.html, // html body
+      attachments: emailData.attachments, // ← Add this line!
     };
     const info = await transporterGmail.sendMail(mailOptions);
     console.log("Email sent %s", info.response);
