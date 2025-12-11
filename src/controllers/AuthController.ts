@@ -11,7 +11,10 @@ import HTTP_STATUS from "../constants/statusCodes";
 import authService from "../services/AuthService";
 import userService from "../services/UserService";
 
-import { signupEmail } from "../templates/emailTemplates";
+import {
+  signupEmail,
+  recoverPasswordEmail,
+} from "../templates/emailTemplateLoader";
 import { emailWithNodemailerGmail } from "../config/email.config";
 
 // import Notification from "../models/notification.model";
@@ -189,11 +192,17 @@ class AuthController {
 
   async sendToken(req: Request, res: Response): Promise<Response> {
     try {
-      const { email } = req.body;
+      const validation = validationResult(req).array();
 
-      const user = await userService.findUserByEmail(email, {
-        includePassword: true,
-      });
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.OK)
+          .send(failure("failed to send token", validation[0]?.msg));
+      }
+
+      const { email, purpose } = req.body;
+
+      const user = await userService.findUserByEmail(email);
 
       if (!user) {
         return res
@@ -201,6 +210,19 @@ class AuthController {
           .send(failure("Please sign up first"));
       }
 
+      // Handle different purposes
+      if (purpose === "passwordRecovery") {
+        const verificationCode = generateRandomCode(6);
+        const emailData = await recoverPasswordEmail(
+          user.fullName,
+          verificationCode.toString(),
+          email
+        );
+
+        emailWithNodemailerGmail(emailData);
+      }
+
+      // Default behavior: generate and return token
       const expiresIn = process.env.JWT_EXPIRES_IN
         ? parseInt(process.env.JWT_EXPIRES_IN, 10)
         : 3600; // default to 1 hour if not set
@@ -225,9 +247,8 @@ class AuthController {
       });
 
       return res.status(HTTP_STATUS.OK).send(
-        success("Login successful", {
-          //   user,
-          token,
+        success("Password recovery email sent successfully", {
+          message: "Please check your email for the verification code",
         })
       );
     } catch (err) {

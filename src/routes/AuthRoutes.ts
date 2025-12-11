@@ -17,10 +17,12 @@ import authValidator from "../validators/authValidator";
 const routes = express();
 const upload = multer();
 
-const { signUp, login } = authController;
+const { signUp, login, sendToken } = authController;
 
 // /api/users
 
 routes.post("/signup", upload.none(), authValidator.signUp, signUp);
 routes.post("/login", upload.none(), login);
+routes.post("/send-token", upload.none(), authValidator.sendToken, sendToken);
+
 export default routes;

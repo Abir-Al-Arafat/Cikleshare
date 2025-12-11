@@ -6,6 +6,19 @@ const authValidator = {
     body("email").not().isEmpty().withMessage("email is required"),
     body("password").not().isEmpty().withMessage("password is required"),
   ],
+  login: [
+    body("email").not().isEmpty().withMessage("email is required"),
+    body("password").not().isEmpty().withMessage("password is required"),
+  ],
+  sendToken: [
+    body("email").not().isEmpty().withMessage("email is required"),
+    body("purpose")
+      .not()
+      .isEmpty()
+      .withMessage("purpose is required")
+      .equals("passwordRecovery")
+      .withMessage("purpose must be 'passwordRecovery'"),
+  ],
 };
 
 export default authValidator;
