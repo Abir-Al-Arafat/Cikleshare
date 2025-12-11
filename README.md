@@ -176,7 +176,7 @@ The application is containerized using Docker with a multi-stage build for optim
 **1. Build the Docker image:**
 
 ```bash
-docker build -t cikleshare-backend .
+docker build -t cikleshare-backend-img .
 ```
 
 **2. Run the container:**
