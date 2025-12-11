@@ -64,10 +64,23 @@ app.use((err: SyntaxError, req: Request, res: Response, next: NextFunction) => {
   res.status(500).send({ message: "Internal Server Error" });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3031;
 
 databaseConnection(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  const server = app.listen(PORT);
+
+  server.on("listening", () => {
+    console.log(`✅ Server is running on port ${PORT}`);
+  });
+
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n❌ ERROR: Port ${PORT} is already in use!`);
+      console.error(`❌ Another process is using this port. Stop it first.\n`);
+      process.exit(1);
+    } else {
+      console.error("❌ Server error:", err);
+      process.exit(1);
+    }
   });
 });
