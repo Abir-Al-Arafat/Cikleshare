@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import ejs from "ejs";
 import { IEmailAttachment, IEmailTemplate } from "../interfaces/IEmailData";
 
 const logoAttachment: IEmailAttachment = {
@@ -170,32 +171,24 @@ const twoFactorAuthEmail = (
   attachments: [logoAttachment],
 });
 
-const forgotPasswordEmail = (
-  recipientName: string | undefined,
+const recoverPasswordEmail = async (
+  recipientName: string | undefined | null,
   code: string,
   recipientEmail: string
-): IEmailTemplate => ({
-  email: recipientEmail,
-  subject: "Password Reset Verification Code",
-  html: `
-    <html>
-      <body style="font-family: Arial, sans-serif; background: #fff; color: #222;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <img src="cid:logo" alt="Cikleshare Logo" style="width: 220px; margin-bottom: 10px;" />
-        </div>
-        <h2>Dear ${recipientName || "User"},</h2>
-        <p>You have requested to reset your password. Please use the following verification code to proceed:</p>
-        <div style="font-size: 2em; font-weight: bold; margin: 20px 0; color: #4CAF50;">${code}</div>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        <br/>
-        <p>Best regards,<br/>
-        <strong>The Cikleshare Team</strong></p>
-        <p style="font-size: 1.1em; color: #888;">Your global health companion, connecting communities worldwide. Switch between countries instantly and access health guides, communities, wellness tracking, and trusted resources.</p>
-      </body>
-    </html>
-  `,
-  attachments: [logoAttachment],
-});
+): Promise<IEmailTemplate> => {
+  const templatePath = path.resolve(__dirname, "./recoverPassword.ejs");
+  const html = await ejs.renderFile(templatePath, {
+    recipientName,
+    code,
+  });
+
+  return {
+    email: recipientEmail,
+    subject: "Password Reset Verification Code",
+    html: html,
+    attachments: [logoAttachment],
+  };
+};
 
 const verifyEmailTemplate = (
   recipientName: string | undefined,
@@ -232,6 +225,6 @@ export {
   paymentConfirmationEmail,
   paymentAdminNotificationEmail,
   twoFactorAuthEmail,
-  forgotPasswordEmail,
+  recoverPasswordEmail,
   verifyEmailTemplate,
 };
