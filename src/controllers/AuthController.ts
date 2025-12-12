@@ -10,6 +10,7 @@ import { validationResult } from "express-validator";
 import HTTP_STATUS from "../constants/statusCodes";
 import authService from "../services/AuthService";
 import userService from "../services/UserService";
+import otpService from "../services/OtpService";
 
 import {
   signupEmail,
@@ -213,6 +214,21 @@ class AuthController {
       // Handle different purposes
       if (purpose === "passwordRecovery") {
         const verificationCode = generateRandomCode(6);
+
+        // Save OTP to database
+        const otpCreated = await otpService.createOtp(
+          email,
+          verificationCode.toString(),
+          purpose,
+          user._id.toString()
+        );
+
+        if (!otpCreated) {
+          return res
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .send(failure("Failed to generate verification code"));
+        }
+
         const emailData = await recoverPasswordEmail(
           user.fullName,
           verificationCode.toString(),
@@ -220,6 +236,12 @@ class AuthController {
         );
 
         emailWithNodemailerGmail(emailData);
+
+        return res.status(HTTP_STATUS.OK).send(
+          success("Password recovery email sent successfully", {
+            message: "Please check your email for the verification code",
+          })
+        );
       }
 
       // Default behavior: generate and return token
@@ -247,8 +269,112 @@ class AuthController {
       });
 
       return res.status(HTTP_STATUS.OK).send(
-        success("Password recovery email sent successfully", {
-          message: "Please check your email for the verification code",
+        success("Token sent successfully", {
+          token,
+        })
+      );
+    } catch (err) {
+      console.log(err);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  async verifyOtp(req: Request, res: Response): Promise<Response> {
+    try {
+      const validation = validationResult(req).array();
+
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.OK)
+          .send(failure("Failed to verify OTP", validation[0]?.msg));
+      }
+
+      const { email, otp, purpose } = req.body;
+
+      const user = await userService.findUserByEmail(email);
+
+      if (!user) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("User not found"));
+      }
+
+      const isValid = await otpService.verifyOtp(email, otp, purpose);
+
+      if (!isValid) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("Invalid or expired OTP"));
+      }
+
+      return res.status(HTTP_STATUS.OK).send(
+        success("OTP verified successfully", {
+          email,
+        })
+      );
+    } catch (err) {
+      console.log(err);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<Response> {
+    try {
+      const validation = validationResult(req).array();
+
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.OK)
+          .send(failure("Failed to reset password", validation[0]?.msg));
+      }
+
+      const { email, newPassword, confirmPassword } = req.body;
+
+      // Check if user has verified OTP first
+      const hasVerifiedOtp = await otpService.hasVerifiedOtp(
+        email,
+        "passwordRecovery"
+      );
+
+      if (!hasVerifiedOtp) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("Please verify OTP first before resetting password"));
+      }
+
+      // Check if passwords match
+      if (newPassword !== confirmPassword) {
+        return res
+          .status(HTTP_STATUS.UNPROCESSABLE_ENTITY)
+          .send(failure("Passwords do not match"));
+      }
+
+      // Find user
+      const user = await userService.findUserByEmail(email);
+
+      if (!user) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("User not found"));
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      user.password = hashedPassword;
+      await user.save();
+
+      // Delete the used OTP
+      await otpService.deleteOtps(email, "passwordRecovery");
+
+      return res.status(HTTP_STATUS.OK).send(
+        success("Password reset successfully", {
+          message: "You can now login with your new password",
         })
       );
     } catch (err) {
