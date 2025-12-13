@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import fs from "fs";
-import path from "path";
 
 import { success, failure } from "../utilities/common";
+import { deleteFile } from "../utilities/fileUtils";
 // import { IQuery } from "../types/query-params";
 // import { IUser } from "../interfaces/user.interface";
 // import { TUploadFields } from "../types/upload-fields";
@@ -70,14 +69,7 @@ class UserController {
 
         // Delete old image if it exists
         if (currentUser?.image) {
-          const oldImagePath = path.join(__dirname, "../..", currentUser.image);
-          if (fs.existsSync(oldImagePath)) {
-            try {
-              fs.unlinkSync(oldImagePath);
-            } catch (err) {
-              console.error("Error deleting old image:", err);
-            }
-          }
+          deleteFile(currentUser.image);
         }
 
         // Store the file path relative to public folder
