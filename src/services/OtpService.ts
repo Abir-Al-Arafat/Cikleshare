@@ -1,5 +1,5 @@
 import Otp from "../models/OtpModel";
-import { IOtp } from "../interfaces/otp.interface";
+import { IOtp } from "../interfaces/OTPInterface";
 
 class OtpService {
   /**
