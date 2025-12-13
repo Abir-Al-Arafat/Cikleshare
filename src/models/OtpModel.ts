@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IOtp } from "../interfaces/otp.interface";
+import { IOtp } from "../interfaces/OTPInterface";
 
 const otpSchema: Schema = new mongoose.Schema(
   {
