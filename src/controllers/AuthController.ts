@@ -239,7 +239,8 @@ class AuthController {
 
         return res.status(HTTP_STATUS.OK).send(
           success("Password recovery email sent successfully", {
-            message: "Please check your email for the verification code",
+            message:
+              "Please check your email for the verification code. It will expire in 3 minutes.",
           })
         );
       }
