@@ -20,7 +20,7 @@ const { getProfile, updateProfile } = userController;
 
 // /api/users
 
-routes.get("/profile", getProfile);
+routes.get("/profile", isAuthorizedUser, getProfile);
 routes.patch(
   "/profile",
   isAuthorizedUser,

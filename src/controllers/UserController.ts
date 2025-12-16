@@ -16,22 +16,28 @@ class UserController {
   // Add your controller methods here
   async getProfile(req: Request, res: Response): Promise<Response> {
     try {
-      //   // Assuming user ID is available in req.params.id
-      //   const userId = req.params.id;
+      if (!(req as any).user) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("User not authenticated"));
+      }
 
-      //   // Find the user by ID
-      //   const user = await User.findById(userId);
+      const userId = (req as any).user?._id;
 
-      //   if (!user) {
-      //     return res.status(HTTP_STATUS.NOT_FOUND).json(failure("User not found"));
-      //   }
+      const user = await userService.findUserById(userId);
 
-      return res.status(HTTP_STATUS.OK).json(success("User found"));
+      if (!user) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .send(failure("User not found"));
+      }
+
+      return res.status(HTTP_STATUS.OK).send(success("User profile", user));
     } catch (error) {
       console.error("Error fetching user profile:", error);
       return res
         .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json(failure("Error fetching user profile"));
+        .send(failure("Error fetching user profile"));
     }
   }
 

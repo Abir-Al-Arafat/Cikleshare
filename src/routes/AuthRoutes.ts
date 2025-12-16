@@ -23,7 +23,7 @@ const { signUp, login, sendToken, verifyOtp, resetPassword } = authController;
 
 routes.post("/signup", upload.none(), authValidator.signUp, signUp);
 routes.post("/login", upload.none(), login);
-routes.post("/send-token", upload.none(), authValidator.sendToken, sendToken);
+routes.post("/token", upload.none(), authValidator.sendToken, sendToken);
 routes.post("/verify-otp", upload.none(), authValidator.verifyOtp, verifyOtp);
 routes.post(
   "/reset-password",
