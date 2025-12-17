@@ -1,0 +1,238 @@
+import { Request, Response } from "express";
+import { validationResult } from "express-validator";
+
+import { success, failure } from "../utilities/common";
+import { deleteFile } from "../utilities/fileUtils";
+import HTTP_STATUS from "../constants/statusCodes";
+import resourceService from "../services/ResourceService";
+import { IResource } from "../interfaces/resource.interface";
+import { TUploadFields } from "../types/upload-fields";
+
+class ResourceController {
+  async createResource(req: Request, res: Response): Promise<Response> {
+    try {
+      const validation = validationResult(req).array();
+
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Validation failed", validation[0]?.msg));
+      }
+
+      // Get user ID from authenticated user
+      const userId = (req as any).user?._id;
+
+      if (!userId) {
+        return res
+          .status(HTTP_STATUS.UNAUTHORIZED)
+          .send(failure("User not authenticated"));
+      }
+
+      const { title, type, country, description } = req.body;
+
+      // Handle uploaded image
+      let imagePath: string | undefined;
+      const files = req.files as TUploadFields;
+      if (files && files.image && files.image[0]) {
+        imagePath = `/public/uploads/images/${files.image[0].filename}`;
+      }
+
+      const payload = {
+        title,
+        type,
+        country,
+        description,
+        ...(imagePath ? { image: imagePath } : {}),
+        createdBy: userId,
+      };
+
+      const resource = await resourceService.createResource(
+        payload as IResource
+      );
+
+      if (!resource) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Failed to create resource"));
+      }
+
+      return res
+        .status(HTTP_STATUS.CREATED)
+        .send(success("Resource created successfully", { resource }));
+    } catch (error) {
+      console.error("Error creating resource:", error);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  /**
+   * Get all resources with pagination and filters
+   */
+  async getAllResources(req: Request, res: Response): Promise<Response> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const country = req.query.country as string;
+      const resourceType = req.query.resourceType as string;
+      const search = req.query.search as string;
+
+      const result = await resourceService.getAllResources(page, limit, {
+        country,
+        resourceType,
+        search,
+      });
+
+      if (!result) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Failed to fetch resources"));
+      }
+
+      return res
+        .status(HTTP_STATUS.OK)
+        .send(success("Resources fetched successfully", result));
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  /**
+   * Get a single resource by ID
+   */
+  async getResourceById(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+
+      const resource = await resourceService.getResourceById(id as string);
+
+      if (!resource) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .send(failure("Resource not found"));
+      }
+
+      return res
+        .status(HTTP_STATUS.OK)
+        .send(success("Resource fetched successfully", { resource }));
+    } catch (error) {
+      console.error("Error fetching resource:", error);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  /**
+   * Update a resource
+   */
+  async updateResource(req: Request, res: Response): Promise<Response> {
+    try {
+      const validation = validationResult(req).array();
+
+      if (validation.length) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Validation failed", validation[0]?.msg));
+      }
+
+      const { id } = req.params;
+      const { title, resourceType, country, description } = req.body;
+
+      // Build updates object
+      const updates: {
+        title?: string;
+        resourceType?: string;
+        country?: string;
+        description?: string;
+        image?: string;
+      } = {};
+
+      if (title) updates.title = title;
+      if (resourceType) updates.resourceType = resourceType;
+      if (country) updates.country = country;
+      if (description) updates.description = description;
+
+      // Handle uploaded image
+      const files = req.files as TUploadFields;
+      if (files && files.image && files.image[0]) {
+        // Get current resource to delete old image
+        const currentResource = await resourceService.getResourceById(
+          id as string
+        );
+
+        if (currentResource?.image) {
+          deleteFile(currentResource.image);
+        }
+
+        updates.image = `/public/uploads/images/${files.image[0].filename}`;
+      }
+
+      const resource = await resourceService.updateResource(
+        id as string,
+        updates
+      );
+
+      if (!resource) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Failed to update resource"));
+      }
+
+      return res
+        .status(HTTP_STATUS.OK)
+        .send(success("Resource updated successfully", { resource }));
+    } catch (error) {
+      console.error("Error updating resource:", error);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+
+  /**
+   * Delete a resource
+   */
+  async deleteResource(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+
+      // Get resource to delete associated image
+      const resource = await resourceService.getResourceById(id as string);
+
+      if (!resource) {
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .send(failure("Resource not found"));
+      }
+
+      // Delete image if exists
+      if (resource.image) {
+        deleteFile(resource.image);
+      }
+
+      const deleted = await resourceService.deleteResource(id as string);
+
+      if (!deleted) {
+        return res
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .send(failure("Failed to delete resource"));
+      }
+
+      return res
+        .status(HTTP_STATUS.OK)
+        .send(success("Resource deleted successfully"));
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      return res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .send(failure("Internal server error"));
+    }
+  }
+}
+
+export default new ResourceController();
