@@ -6,6 +6,7 @@ import http from "http";
 import cookieParser from "cookie-parser";
 
 import databaseConnection from "./config/database";
+import { failure } from "./utilities/common";
 
 import authRouter from "./routes/AuthRoutes";
 import userRouter from "./routes/UserRoutes";
@@ -30,7 +31,7 @@ app.use(
     next: NextFunction
   ) => {
     if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-      return res.status(400).send({ message: "Invalid JSON format" });
+      return res.status(400).send(failure("Invalid JSON format"));
     }
     next();
   }
@@ -57,13 +58,32 @@ app.get("/", (req: Request, res: Response) => {
 
 // ✅ Handle 404 Routes
 app.use((req, res) => {
-  return res.status(400).send({ message: "Route does not exist" });
+  return res.status(400).send(failure("Route does not exist"));
 });
 
 // ✅ Handle Global Errors
-app.use((err: SyntaxError, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Global Error", err);
-  res.status(500).send({ message: "Internal Server Error" });
+
+  // Handle Multer errors
+  if (err.name === "MulterError") {
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      return res
+        .status(400)
+        .send(
+          failure(
+            `Unexpected field: '${err.field}'. Multiple files for this field are not allowed.`
+          )
+        );
+    }
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).send(failure("File size too large"));
+    }
+    return res.status(400).send(failure(err.message));
+  }
+
+  // Handle other errors
+  res.status(500).send(failure("Internal Server Error"));
 });
 
 const PORT = process.env.PORT || 3031;
