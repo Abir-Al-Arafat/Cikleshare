@@ -5,7 +5,7 @@ export interface IResource extends Document {
   type: string;
   country: string;
   description: string;
-  image?: string;
+  images?: string[];
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

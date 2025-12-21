@@ -79,7 +79,7 @@ class ResourceService {
       resourceType?: string;
       country?: string;
       description?: string;
-      image?: string;
+      images?: string[];
     }
   ): Promise<IResource | null> {
     try {

@@ -31,8 +31,8 @@ const resourceSchema: Schema = new mongoose.Schema(
       type: String,
       required: [true, "Description is required"],
     },
-    image: {
-      type: String,
+    images: {
+      type: [String],
     },
     createdBy: {
       type: Schema.Types.ObjectId,

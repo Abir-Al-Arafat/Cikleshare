@@ -30,11 +30,14 @@ class ResourceController {
 
       const { title, type, country, description } = req.body;
 
-      // Handle uploaded image
-      let imagePath: string | undefined;
+      // Handle uploaded files
+      let imagePaths: string[] = [];
       const files = req.files as TUploadFields;
-      if (files && files.image && files.image[0]) {
-        imagePath = `/public/uploads/images/${files.image[0].filename}`;
+
+      if (files && files.images && files.images.length > 0) {
+        imagePaths = files.images.map(
+          (file) => `/public/uploads/images/${file.filename}`
+        );
       }
 
       const payload = {
@@ -42,7 +45,7 @@ class ResourceController {
         type,
         country,
         description,
-        ...(imagePath ? { image: imagePath } : {}),
+        ...(imagePaths.length > 0 ? { images: imagePaths } : {}),
         createdBy: userId,
       };
 
@@ -143,13 +146,38 @@ class ResourceController {
       const { id } = req.params;
       const { title, resourceType, country, description } = req.body;
 
+      // Handle uploaded files first (before checking resource exists)
+      const files = req.files as TUploadFields;
+      let newImagePaths: string[] = [];
+
+      if (files && files.images && files.images.length > 0) {
+        newImagePaths = files.images.map(
+          (file) => `/public/uploads/images/${file.filename}`
+        );
+      }
+
+      // Get current resource
+      const currentResource = await resourceService.getResourceById(
+        id as string
+      );
+
+      if (!currentResource) {
+        // Delete uploaded files since resource doesn't exist
+        if (newImagePaths.length > 0) {
+          newImagePaths.forEach((img) => deleteFile(img));
+        }
+        return res
+          .status(HTTP_STATUS.NOT_FOUND)
+          .send(failure("Resource not found"));
+      }
+
       // Build updates object
       const updates: {
         title?: string;
         resourceType?: string;
         country?: string;
         description?: string;
-        image?: string;
+        images?: string[];
       } = {};
 
       if (title) updates.title = title;
@@ -157,30 +185,34 @@ class ResourceController {
       if (country) updates.country = country;
       if (description) updates.description = description;
 
-      // Handle uploaded image
-      const files = req.files as TUploadFields;
-      if (files && files.image && files.image[0]) {
-        // Get current resource to delete old image
-        const currentResource = await resourceService.getResourceById(
-          id as string
-        );
+      let oldImagesToDelete: string[] = [];
 
-        if (currentResource?.image) {
-          deleteFile(currentResource.image);
+      if (files && files.images && files.images.length) {
+        updates.images = newImagePaths;
+        if (currentResource.images && currentResource.images.length) {
+          oldImagesToDelete = [...currentResource.images];
         }
-
-        updates.image = `/public/uploads/images/${files.image[0].filename}`;
       }
 
+      // Try to update the resource
       const resource = await resourceService.updateResource(
         id as string,
         updates
       );
 
       if (!resource) {
+        // Update failed - delete newly uploaded files
+        if (newImagePaths.length) {
+          newImagePaths.forEach((img) => deleteFile(img));
+        }
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .send(failure("Failed to update resource"));
+      }
+
+      // Update succeeded - delete old files
+      if (oldImagesToDelete.length) {
+        oldImagesToDelete.forEach((img) => deleteFile(img));
       }
 
       return res
@@ -210,9 +242,9 @@ class ResourceController {
           .send(failure("Resource not found"));
       }
 
-      // Delete image if exists
-      if (resource.image) {
-        deleteFile(resource.image);
+      // Delete images if exist
+      if (resource.images && resource.images.length) {
+        resource.images.forEach((img) => deleteFile(img));
       }
 
       const deleted = await resourceService.deleteResource(id as string);

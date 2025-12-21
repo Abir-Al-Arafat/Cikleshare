@@ -37,6 +37,7 @@ const configureFileUpload = () => {
     const allowedFieldnames = [
       "productImage",
       "image",
+      "images",
       "categoryImage",
       "videoFile",
       "audioFile",
@@ -68,6 +69,7 @@ const configureFileUpload = () => {
   }).fields([
     { name: "productImage", maxCount: 10 },
     { name: "image", maxCount: 1 },
+    { name: "images", maxCount: 10 },
     { name: "categoryImage", maxCount: 1 },
     { name: "videoFile", maxCount: 1 },
     { name: "audioFile", maxCount: 1 },
