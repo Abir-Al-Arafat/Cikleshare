@@ -5,15 +5,30 @@ import { success, failure } from "../utilities/common";
 import { deleteFile } from "../utilities/fileUtils";
 import HTTP_STATUS from "../constants/statusCodes";
 import resourceService from "../services/ResourceService";
-import { IResource } from "../interfaces/resource.interface";
+import { IResource } from "../interfaces/ResourceInterface";
 import { TUploadFields } from "../types/upload-fields";
 
 class ResourceController {
   async createResource(req: Request, res: Response): Promise<Response> {
     try {
+      // Handle uploaded files first
+      let imagePaths: string[] = [];
+      const files = req.files as TUploadFields;
+
+      if (files && files.images && files.images.length) {
+        imagePaths = files.images.map(
+          (file) => `/public/uploads/images/${file.filename}`
+        );
+      }
+
+      // Check validation
       const validation = validationResult(req).array();
 
       if (validation.length) {
+        // Delete uploaded files on validation failure
+        if (imagePaths.length) {
+          imagePaths.forEach((img) => deleteFile(img));
+        }
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .send(failure("Validation failed", validation[0]?.msg));
@@ -23,28 +38,23 @@ class ResourceController {
       const userId = (req as any).user?._id;
 
       if (!userId) {
+        // Delete uploaded files on auth failure
+        if (imagePaths.length) {
+          imagePaths.forEach((img) => deleteFile(img));
+        }
         return res
           .status(HTTP_STATUS.UNAUTHORIZED)
           .send(failure("User not authenticated"));
       }
 
-      const { title, type, country, description } = req.body;
-
-      // Handle uploaded files
-      let imagePaths: string[] = [];
-      const files = req.files as TUploadFields;
-
-      if (files && files.images && files.images.length > 0) {
-        imagePaths = files.images.map(
-          (file) => `/public/uploads/images/${file.filename}`
-        );
-      }
+      const { title, type, country, description, department } = req.body;
 
       const payload = {
         title,
         type,
         country,
         description,
+        department,
         ...(imagePaths.length > 0 ? { images: imagePaths } : {}),
         createdBy: userId,
       };
@@ -54,6 +64,10 @@ class ResourceController {
       );
 
       if (!resource) {
+        // Delete uploaded files on creation failure
+        if (imagePaths.length) {
+          imagePaths.forEach((img) => deleteFile(img));
+        }
         return res
           .status(HTTP_STATUS.BAD_REQUEST)
           .send(failure("Failed to create resource"));
@@ -64,6 +78,15 @@ class ResourceController {
         .send(success("Resource created successfully", { resource }));
     } catch (error) {
       console.error("Error creating resource:", error);
+
+      // Delete uploaded files on any error
+      const files = req.files as TUploadFields;
+      if (files && files.images && files.images.length > 0) {
+        files.images.forEach((file) => {
+          deleteFile(`/public/uploads/images/${file.filename}`);
+        });
+      }
+
       return res
         .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
         .send(failure("Internal server error"));
@@ -77,13 +100,15 @@ class ResourceController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const country = req.query.country as string;
-      const resourceType = req.query.resourceType as string;
+      //   const country = req.query.country as string;
+      //   const resourceType = req.query.resourceType as string;
+      const department = req.query.department as string;
       const search = req.query.search as string;
 
       const result = await resourceService.getAllResources(page, limit, {
-        country,
-        resourceType,
+        // country,
+        // resourceType,
+        department,
         search,
       });
 
