@@ -1,5 +1,5 @@
 import Resource from "../models/ResourceModel";
-import { IResource } from "../interfaces/resource.interface";
+import { IResource } from "../interfaces/ResourceInterface";
 import { QueryBuilder } from "../utilities/QueryBuilder";
 
 class ResourceService {
@@ -21,6 +21,7 @@ class ResourceService {
     filters: {
       country?: string;
       resourceType?: string;
+      department?: string;
       search?: string;
       sortBy?: string;
       sortOrder?: "asc" | "desc";
@@ -33,6 +34,7 @@ class ResourceService {
       const filterObj: any = {};
       if (filters.country) filterObj.country = filters.country;
       if (filters.resourceType) filterObj.resourceType = filters.resourceType;
+      if (filters.department) filterObj.department = filters.department;
 
       queryBuilder
         .filter(filterObj)

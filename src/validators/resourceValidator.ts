@@ -8,6 +8,7 @@ const resourceValidator = {
       .withMessage("Title is required")
       .isLength({ min: 5 })
       .withMessage("Title must be at least 5 characters"),
+    body("department").not().isEmpty().withMessage("Department is required"),
     body("type")
       .not()
       .isEmpty()

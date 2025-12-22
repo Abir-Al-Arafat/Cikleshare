@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IResource } from "../interfaces/resource.interface";
+import { IResource } from "../interfaces/ResourceInterface";
 
 const resourceSchema: Schema = new mongoose.Schema(
   {
@@ -30,6 +30,11 @@ const resourceSchema: Schema = new mongoose.Schema(
     description: {
       type: String,
       required: [true, "Description is required"],
+    },
+    department: {
+      type: String,
+      required: [true, "Department is required"],
+      trim: true,
     },
     images: {
       type: [String],
