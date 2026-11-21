@@ -2,4 +2,3 @@ node_modules/
 dist/
 tsconfig.tsbuildinfo
 public/uploads/
-config.bat
